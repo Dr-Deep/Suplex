@@ -1,0 +1,15 @@
+{
+    "token": "Bot OTM0NTgwOTM0MDA5ODQzNzky.GYAyhK.YxTmva7DG29Tmd_J3B1KH2Dn-4AhluaRGiMu7Q",
+    "prefix": "s.",
+
+    "guild": {
+        "id": "934176001531969556",
+        "channels": {
+            "welcome": "934176121161920702",
+            "logs": "934385220101242903"
+        },
+        "roles": {
+            "default": "934385898437632010"
+        }
+    }   
+}
