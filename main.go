@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tripledoomer/Suplex/internals/cogs"
 	"github.com/tripledoomer/Suplex/internals/commands"
 	"github.com/tripledoomer/Suplex/internals/config"
 	"github.com/tripledoomer/Suplex/internals/events"
@@ -70,12 +71,12 @@ func registerEvents(s *discordgo.Session) {
 }
 
 func registerCommands(s *discordgo.Session, cfg *config.Config) {
-	cmdHandler := commands.NewCommandHandler(cfg.Prefix)
-	cmdHandler.OnError = func(err error, ctx *commands.Context) {
+	cmdHandler := cogs.NewCommandHandler(cfg.Prefix)
+	cmdHandler.OnError = func(err error, ctx *cogs.Context) {
 		ctx.Session.ChannelMessageSend(ctx.Message.ChannelID, fmt.Sprintf("[*/OnError] ERR: %s", err.Error()))
 	}
 
 	cmdHandler.RegisterCommand(&commands.CmdPing{})
-	cmdHandler.RegisterMiddleware(&commands.MwPermissions{})
+	cmdHandler.RegisterMiddleware(&cogs.MwPermissions{})
 	s.AddHandler(cmdHandler.HandleMessage)
 }

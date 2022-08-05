@@ -1,5 +1,9 @@
 package commands
 
+import (
+	"github.com/tripledoomer/Suplex/internals/cogs"
+)
+
 type CmdPing struct{}
 
 func (c *CmdPing) Invokes() []string {
@@ -14,7 +18,7 @@ func (c *CmdPing) AdminRequired() bool {
 	return true
 }
 
-func (c *CmdPing) Exec(ctx *Context) error {
+func (c *CmdPing) Exec(ctx *cogs.Context) error {
 	if _, err := ctx.Session.ChannelMessageSend(ctx.Message.ChannelID, "Pong!"); err != nil {
 		return err
 	}

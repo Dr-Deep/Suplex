@@ -1,4 +1,4 @@
-package commands
+package cogs
 
 type Command interface {
 	Invokes() []string
