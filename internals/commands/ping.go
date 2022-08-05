@@ -14,8 +14,8 @@ func (c *CmdPing) Description() string {
 	return "Ping command"
 }
 
-func (c *CmdPing) AdminRequired() bool {
-	return true
+func (c *CmdPing) ModRequired() bool {
+	return false
 }
 
 func (c *CmdPing) Exec(ctx *cogs.Context) error {

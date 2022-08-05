@@ -21,7 +21,8 @@ type Config struct {
 		} `json:"channels"`
 
 		Roles struct {
-			DefaultRole string `json:"default"`
+			DefaultRole   string `json:"default"`
+			ModeratorRole string `json:"moderator"`
 		} `json:"roles"`
 	} `json:"guild"`
 	Logging struct {

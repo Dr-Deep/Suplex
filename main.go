@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -46,7 +45,7 @@ func main() {
 	startTime := time.Now()
 	s, Serr := discordgo.New(config.Cfg.Token)
 	if Serr != nil {
-		log.Panic(Serr)
+		logging.Logf(logging.Fatal, Serr.Error())
 	}
 
 	s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
@@ -55,7 +54,7 @@ func main() {
 	registerCommands(s, config.Cfg)
 
 	if err := s.Open(); err != nil {
-		log.Panic(err)
+		logging.Logf(logging.Fatal, err.Error())
 	}
 
 	sc := make(chan os.Signal, 1)
@@ -63,8 +62,7 @@ func main() {
 	<-sc
 
 	s.Close()
-	log.Printf("[main] took %s\n", time.Since(startTime))
-	log.Println("Exiting...")
+	logging.Logf(logging.Info, "[main] took %s", time.Since(startTime))
 
 }
 
