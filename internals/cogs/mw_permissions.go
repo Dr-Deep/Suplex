@@ -1,6 +1,8 @@
 package cogs
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+)
 
 type MwPermissions struct{}
 
