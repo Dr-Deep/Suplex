@@ -12,6 +12,7 @@ import (
 	"github.com/tripledoomer/Suplex/internals/commands"
 	"github.com/tripledoomer/Suplex/internals/config"
 	"github.com/tripledoomer/Suplex/internals/events"
+	"github.com/tripledoomer/Suplex/internals/logging"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -22,19 +23,27 @@ const (
 
 func init() {
 	startTime := time.Now()
-	log.Println("[init] Starting...")
+	logging.Logf(logging.Info, "[init] %s", startTime.String())
 
-	cfgErr := config.ParseConfigFromJSONFile(configFile)
-	if cfgErr != nil {
-		log.Panic(cfgErr)
+	// load config
+	config.ParseConfigFromJSONFile(configFile)
+
+	// TODO: log in db/file?
+
+	// log level
+	if config.Cfg.Logging.Level <= 4 {
+		logging.SetLogLevel(config.Cfg.Logging.Level)
+	} else {
+		logging.Logf(logging.Warn, "invalid log level")
 	}
 
-	log.Printf("[init] took %s\n", time.Since(startTime))
+	// TODO: database
+
+	logging.Logf(logging.Info, "[init] took %s", time.Since(startTime))
 }
 
 func main() {
 	startTime := time.Now()
-	log.Println("[main] Suplex is Launching...")
 	s, Serr := discordgo.New(config.Cfg.Token)
 	if Serr != nil {
 		log.Panic(Serr)

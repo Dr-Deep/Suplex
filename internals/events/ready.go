@@ -1,9 +1,8 @@
 package events
 
 import (
-	"log"
-
 	"github.com/bwmarrin/discordgo"
+	"github.com/tripledoomer/Suplex/internals/logging"
 )
 
 type ReadyHandler struct{}
@@ -13,5 +12,5 @@ func NewReadyHandler() *ReadyHandler {
 }
 
 func (h *ReadyHandler) Handler(s *discordgo.Session, e *discordgo.Ready) {
-	log.Printf("[events/ready] %s is running\n", e.User.String())
+	logging.Logf(logging.Info, "[events/ready] %s is running", e.User.String())
 }

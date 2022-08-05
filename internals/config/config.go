@@ -3,6 +3,8 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+
+	"github.com/tripledoomer/Suplex/internals/logging"
 )
 
 var Cfg *Config
@@ -22,17 +24,19 @@ type Config struct {
 			DefaultRole string `json:"default"`
 		} `json:"roles"`
 	} `json:"guild"`
+	Logging struct {
+		Level int `json:"level"`
+	} `json:"logging"`
 }
 
-func ParseConfigFromJSONFile(configPath string) error {
+func ParseConfigFromJSONFile(configPath string) {
 	if cf, err := ioutil.ReadFile(configPath); err != nil {
-		return err
+		logging.Logf(logging.Fatal, err.Error())
 	} else {
 		var c Config
 		if err := json.Unmarshal(cf, &c); err != nil {
-			return err
+			logging.Logf(logging.Fatal, err.Error())
 		}
 		Cfg = &c
-		return nil
 	}
 }
