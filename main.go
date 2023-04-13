@@ -1,89 +1,75 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
+	"suplex/internal"
+	"suplex/internal/config"
+	"suplex/internal/event"
+	"suplex/internal/log"
 	"syscall"
-	"time"
-
-	"github.com/tripledoomer/Suplex/internals/cogs"
-	"github.com/tripledoomer/Suplex/internals/commands"
-	"github.com/tripledoomer/Suplex/internals/config"
-	"github.com/tripledoomer/Suplex/internals/events"
-	"github.com/tripledoomer/Suplex/internals/logging"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 const (
-	configFile = "config.json"
+	configFilePath = "./config.json"
+)
+
+var (
+	cfg    *config.Configuration
+	logger *log.Logger
+	//db
 )
 
 func init() {
-	startTime := time.Now()
-	logging.Logf(logging.Info, "[init] %s", startTime.String())
+	var err error
 
-	// load config
-	config.ParseConfigFromJSONFile(configFile)
-
-	// TODO: log in db/file?
-
-	// log level
-	if config.Cfg.Logging.Level <= 4 {
-		logging.SetLogLevel(config.Cfg.Logging.Level)
-	} else {
-		logging.Logf(logging.Warn, "invalid log level")
+	// Config
+	cfg, err = config.ParseConfigFromJSONFile(configFilePath)
+	if err != nil {
+		panic(err)
 	}
 
-	// TODO: database
+	// Logger
+	logger, err = log.NewLogger(
+		cfg.Logging.Method,
+		cfg.Logging.File,
+		cfg.Logging.Level,
+	)
+	if err != nil {
+		panic(err)
+	}
 
-	logging.Logf(logging.Info, "[init] took %s", time.Since(startTime))
+	//?db
+
 }
 
 func main() {
-	startTime := time.Now()
-	s, Serr := discordgo.New(config.Cfg.Token)
-	if Serr != nil {
-		logging.Logf(logging.Fatal, Serr.Error())
+
+	suplex, err := internal.NewSuplex(cfg, logger)
+	if err != nil {
+		panic(err)
 	}
 
-	s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
+	//?
+	suplex.Session.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 
-	registerEvents(s)
-	registerCommands(s, config.Cfg)
+	/*
+	 * Register Events
+	 */
+	suplex.Session.AddHandler(event.NewReadyHandler(suplex).Exec)
+	suplex.Session.AddHandler(event.NewJoinHandler(suplex).Exec)
+	suplex.Session.AddHandler(event.NewLeaveHandler(suplex).Exec)
 
-	if err := s.Open(); err != nil {
-		logging.Logf(logging.Fatal, err.Error())
-	}
+	// Start Bot
+	go suplex.Start()
 
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	//
+	var sc = make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 	<-sc
 
-	s.Close()
-	logging.Logf(logging.Info, "[main] took %s", time.Since(startTime))
-
-}
-
-func registerEvents(s *discordgo.Session) {
-	joinLeaveHandler := events.NewJoinLeaveHandler()
-	s.AddHandler(joinLeaveHandler.HandlerJoin)
-	s.AddHandler(joinLeaveHandler.HandlerLeave)
-
-	s.AddHandler(events.NewMessageHandler().Handler)
-
-	s.AddHandler(events.NewReadyHandler().Handler)
-
-}
-
-func registerCommands(s *discordgo.Session, cfg *config.Config) {
-	cmdHandler := cogs.NewCommandHandler(cfg.Prefix)
-	cmdHandler.OnError = func(err error, ctx *cogs.Context) {
-		ctx.Session.ChannelMessageSend(ctx.Message.ChannelID, fmt.Sprintf("[*/OnError] ERR: %s", err.Error()))
-	}
-
-	cmdHandler.RegisterCommand(&commands.CmdPing{})
-	cmdHandler.RegisterMiddleware(&cogs.MwPermissions{})
-	s.AddHandler(cmdHandler.HandleMessage)
+	// Stop Bot
+	suplex.Stop()
 }
