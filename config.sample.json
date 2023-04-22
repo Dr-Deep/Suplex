@@ -1,6 +1,6 @@
 {
+    "prefix": "",
     "token": "",
-    "app_id": "",
 
     "logging": {
         "method": ["stdout", "file"],
