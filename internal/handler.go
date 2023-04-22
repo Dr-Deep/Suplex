@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -13,37 +12,24 @@ type CommandHandler struct {
 	sync.Mutex
 }
 
-func (h *CommandHandler) RegisterCommand(cmd *Command) error {
-	if _, ok := h.cmdMap[cmd.Invoke]; ok {
-		return fmt.Errorf("command exists")
+func (h *CommandHandler) RegisterCommand(cmd *Command) {
+	if _, ok := h.cmdMap[cmd.Name]; ok {
+		panic(fmt.Errorf("command exists"))
 	}
 
 	h.Lock()
-	h.cmdMap[cmd.Invoke] = cmd
+	h.cmdMap[cmd.Name] = cmd
 	h.Unlock()
-
-	return nil
 }
 
 // Todo: middlewares
-func (h *CommandHandler) Handle(message *discordgo.Message) {
-
-	var split = strings.Split(
-		strings.Replace(message.Content, "%", "", 1),
-		" ",
-	)
-
-	cmd, ok := h.cmdMap[split[0]]
+func (h *CommandHandler) Handle(i *discordgo.InteractionCreate) {
+	cmd, ok := h.cmdMap[i.ApplicationCommandData().Name]
 	if !ok {
 		return
 	}
 
-	go cmd.Exec(
-		&CommandContext{
-			Arguments: split,
-			Message:   message,
-		},
-	)
+	go cmd.Exec(i.Interaction)
 }
 
 /*

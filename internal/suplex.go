@@ -43,7 +43,7 @@ func NewSuplex(cfg *config.Configuration, logger *log.Logger) (*Suplex, error) {
 		restartSignal: make(chan os.Signal),
 	}
 
-	session, err := discordgo.New(suplex.Config.Token)
+	session, err := discordgo.New("Bot " + suplex.Config.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -106,4 +106,38 @@ func (bot *Suplex) handlePanic() {
 		bot.Logger.Error("(*Suplex).handlePanic()", "trying to restart...")
 		//? restart
 	}
+}
+
+func (bot *Suplex) ReregisterAllCommands() {
+	//unregister all
+	cmds, err := bot.Session.ApplicationCommands(
+		bot.Session.State.User.ID,
+		"",
+	)
+	if err != nil {
+		//?
+	}
+
+	if len(cmds) > 0 {
+		for _, command := range cmds {
+			bot.Session.ApplicationCommandDelete(
+				bot.Session.State.User.ID,
+				"",
+				command.ID,
+			)
+		}
+	}
+
+	//
+	for _, cmd := range bot.Handler.cmdMap {
+		if _, err := bot.Session.ApplicationCommandCreate(
+			bot.Session.State.User.ID,
+			"",
+			cmd.ApplicationCommand,
+		); err != nil {
+			bot.Logger.Error("(*Suplex).ReregisterAllCommands()", "skipping because of an error...", cmd.Name, err.Error())
+			continue
+		}
+	}
+
 }

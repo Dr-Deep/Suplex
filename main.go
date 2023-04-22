@@ -58,16 +58,15 @@ func main() {
 	 */
 	suplex.Session.AddHandler(event.NewReadyHandler(suplex).Exec)
 	suplex.Session.AddHandler(event.NewMessageAddHandler(suplex).Exec)
+	suplex.Session.AddHandler(event.NewInteractionAdd(suplex).Exec)
 	suplex.Session.AddHandler(event.NewDefaultHandler(suplex).Exec)
 
 	/*
 	 * Register Commands
 	 */
 
-	err = suplex.Handler.RegisterCommand(command.NewTestCommand(suplex))
-	if err != nil {
-		panic(err)
-	}
+	suplex.Handler.RegisterCommand(command.NewTestCommand(suplex))
+	suplex.Handler.RegisterCommand(command.NewNekoCommand(suplex))
 
 	// Start Bot
 	suplex.Start()

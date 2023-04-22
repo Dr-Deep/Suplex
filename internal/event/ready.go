@@ -16,4 +16,7 @@ func NewReadyHandler(self *internal.Suplex) *ReadyHandler {
 
 func (h *ReadyHandler) Exec(s *discordgo.Session, e *discordgo.Ready) {
 	h.Logger.Info("Ready", "Bot up as", e.User.Username)
+
+	// Register All registered Slash-Commands
+	h.ReregisterAllCommands()
 }
