@@ -1,11 +1,12 @@
 package config
 
 type Configuration struct {
-	Token string
+	Prefix string `json:"prefix"`
+	Token  string `json:"token"`
 
 	Logging struct {
-		Method []string
-		File   string
-		Level  string
-	}
+		Method []string `json:"method"`
+		File   string   `json:"file"`
+		Level  string   `json:"level"`
+	} `json:"logging"`
 }

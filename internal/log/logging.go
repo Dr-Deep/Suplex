@@ -87,12 +87,15 @@ func NewLogger(method []string, file string, level string) (*Logger, error) {
 
 	for _, p := range method {
 		switch p {
+		//?case syslog
 		case "stdout":
 			logger.MethodSTDOUT = true
 			logger.stdoutWriteLock = &sync.Mutex{}
+
 		case "stderr":
 			logger.MethodSTDERR = true
 			logger.stdoutWriteLock = &sync.Mutex{}
+
 		case "file":
 			logger.MethodFile.Enabled = true
 			logger.fileWriteLock = &sync.Mutex{}

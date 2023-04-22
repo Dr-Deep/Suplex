@@ -1,0 +1,10 @@
+{
+    "token": "",
+    "app_id": "",
+
+    "logging": {
+        "method": ["stdout", "file"],
+        "file": "suplex.log",
+        "level": "debug"
+    }
+}

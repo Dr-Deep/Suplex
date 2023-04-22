@@ -1,13 +1,11 @@
 package main
 
 import (
-	"os"
-	"os/signal"
 	"suplex/internal"
+	"suplex/internal/command"
 	"suplex/internal/config"
 	"suplex/internal/event"
 	"suplex/internal/log"
-	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -59,17 +57,47 @@ func main() {
 	 * Register Events
 	 */
 	suplex.Session.AddHandler(event.NewReadyHandler(suplex).Exec)
-	suplex.Session.AddHandler(event.NewJoinHandler(suplex).Exec)
-	suplex.Session.AddHandler(event.NewLeaveHandler(suplex).Exec)
+	suplex.Session.AddHandler(event.NewMessageAddHandler(suplex).Exec)
+	suplex.Session.AddHandler(event.NewDefaultHandler(suplex).Exec)
+
+	/*
+	 * Register Commands
+	 */
+
+	err = suplex.Handler.RegisterCommand(command.NewTestCommand(suplex))
+	if err != nil {
+		panic(err)
+	}
 
 	// Start Bot
-	go suplex.Start()
-
-	//
-	var sc = make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
-	<-sc
+	suplex.Start()
 
 	// Stop Bot
 	suplex.Stop()
 }
+
+/*
+func main() {
+    // Register the slash command with Discord
+    command := &discordgo.ApplicationCommand{
+        Name:        "ping",
+        Description: "Responds with Pong!",
+    }
+    _, err = discord.ApplicationCommandCreate(discord.State.User.ID, "", command)
+    if err != nil {
+        log.Fatal("Error creating slash command: ", err)
+    }
+
+}
+
+func handleSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+    if i.ApplicationCommandData().Name == "ping" {
+        s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+            Type: discordgo.InteractionResponseChannelMessageWithSource,
+            Data: &discordgo.InteractionResponseData{
+                Content: "Pong!",
+            },
+        })
+    }
+}
+*/

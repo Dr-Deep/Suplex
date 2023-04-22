@@ -7,13 +7,13 @@ import (
 )
 
 type ReadyHandler struct {
-	self *internal.Suplex
+	*internal.Suplex
 }
 
 func NewReadyHandler(self *internal.Suplex) *ReadyHandler {
-	return &ReadyHandler{self: self}
+	return &ReadyHandler{self}
 }
 
 func (h *ReadyHandler) Exec(s *discordgo.Session, e *discordgo.Ready) {
-	h.self.Logger.Info("Ready", "Bot up as", e.User.Username)
+	h.Logger.Info("Ready", "Bot up as", e.User.Username)
 }
