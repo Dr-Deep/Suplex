@@ -302,7 +302,7 @@ for the user with the guilds.join scope.
 Returns a 201 Created with the guild member as the body,
 or 204 No Content if the user is already a member of the guild.
 */
-func (oauth2 *DiscordOAuth2Client) AddGuildMember(user_id string) error {
+func (oauth2 *DiscordOAuth2Client) AddGuildMember(user_id, member_role_id string) error {
 	var url = fmt.Sprintf(
 		DISCORD_ENDPOINT_API_GUILD+"/%s/members/%s",
 		oauth2.guildID,
@@ -313,7 +313,7 @@ func (oauth2 *DiscordOAuth2Client) AddGuildMember(user_id string) error {
 	jsonBody, err := json.Marshal(
 		&DiscordAPI_Req_Guild_Join{
 			Access_Token: oauth2.Token,
-			Roles:        []string{"MEMBER ROLE ID"}, //!
+			Roles:        []string{member_role_id},
 		},
 	)
 	if err != nil {
