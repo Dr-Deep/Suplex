@@ -1,3 +1,6 @@
+/*
+? 'User-Agent': 'XXX'
+*/
 package web
 
 import (
@@ -6,18 +9,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-)
+	"strings"
 
-/*
-OAuth2 Scopes
-* guilds.join => '/guilds/{guild.id}/members/{user.id}'
-*/
+	"github.com/bwmarrin/discordgo"
+)
 
 const (
 	// API
-	DISCORD_ENDPOINT_API            = "https://discord.com/api/v8" //' v10'?
-	DISCORD_ENDPOINT_API_USERS_ME   = DISCORD_ENDPOINT_API + "/users/@me"
-	DISCORD_ENDPOINT_API_GUILD_JOIN = DISCORD_ENDPOINT_API + "'/guilds/{guild.id}/members/{user.id}"
+	DISCORD_ENDPOINT_API          = "https://discord.com/api/v8" //' v10'?
+	DISCORD_ENDPOINT_API_USERS_ME = DISCORD_ENDPOINT_API + "/users/@me"
+	DISCORD_ENDPOINT_API_GUILD    = DISCORD_ENDPOINT_API + "'/guilds"
 
 	// OAuth2
 	DISCORD_ENDPOINT_OAUTH2       = DISCORD_ENDPOINT_API + "/oauth2"
@@ -25,34 +26,13 @@ const (
 	DISCORD_ENDPOINT_OAUTH2_AUTH  = DISCORD_ENDPOINT_OAUTH2 + "/authorize"
 )
 
-/*
-HEADERS:
-	'Content-Type': 'application/x-www-form-urlencoded'
-	'User-Agent': 'XXX'
-*/
-
-// 'Content-Type': 'application/json'
-type DiscordAPI_Req_Users struct {
-	Authorization string // ? HEADER ODER SO ("Bot TOKEN")
-}
-
-// ? was noch
-type DiscordAPI_Resp_Users struct {
-	Username      string
-	Discriminator string
-	ID            string
-	Locale        string
-	Refresh_Token string
-}
-
-// url=f"{API_ENDPOINT}/guilds/{str(GUILD_ID)}/members/{user_id}",
+// Resp: status-code: [201, 204]
 type DiscordAPI_Req_Guild_Join struct {
-	Access_Token string
-	Roles        []string // role_ID
-}
-type DiscordAPI_Resp_Guild_Join struct {
-	//?
-	// status code?
+	Access_Token string   `json:"access_token"`
+	Nick         string   `json:"nick"`
+	Roles        []string `json:"roles"`
+	Mute         bool     `json:"mute"`
+	Deaf         bool     `json:"deaf"`
 }
 
 // Access Token Exchange
@@ -65,6 +45,7 @@ type DiscordOAuth2_Req_Token struct {
 }
 
 // Refresh Token Exchange Example
+// Resp: DiscordOAuth2_Resp_Token
 type DiscordOAuth2_Req_Refresh_Token struct {
 	Client_ID     string
 	Client_Secret string
@@ -81,27 +62,13 @@ type DiscordOAuth2_Resp_Token struct {
 	Scope         string //[]string? (identify,guilds.join)
 }
 
-type DiscordOAuth2_Req_Auth struct {
-	Client_ID        string
-	Response_Type    string //'code'
-	Scope            string //[]string? (identify,guilds.join) && getrennt mit '%20', URL encode?
-	State            string
-	Redirect_URI     string
-	Prompt           string // 'none'
-	Integration_Type uint   // '0' || '1'
-}
-
-type DiscordOAuth2_Resp_Auth struct {
-	Code  string
-	State string
-}
-
 type DiscordOAuth2Client struct {
+	Token        string
 	clientID     string
 	clientSecret string
 	guildID      string
+	scope        string
 	redirectURI  string
-	//	stateSigningKey []byte ???
 
 	onSuccess OnSuccessFunc
 	onError   OnErrorFunc
@@ -109,58 +76,77 @@ type DiscordOAuth2Client struct {
 	client *http.Client
 }
 
-type OnSuccessFunc func() error // ctx,route?,resp
-type OnErrorFunc func() error
+type OnSuccessFunc func(*DiscordOAuth2_Resp_Token) error // ctx,route?,resp
+type OnErrorFunc func(error) error
 
-func NewDiscordOAuth2(client_id, client_secret, guild_id, redirURL string, OnSuccess OnSuccessFunc, OnError OnErrorFunc) (*DiscordOAuth2Client, error) {
+func NewDiscordOAuth2(token, client_id, client_secret, guild_id, redirURL string, scopes []string, OnSuccess OnSuccessFunc, OnError OnErrorFunc) *DiscordOAuth2Client {
 	if OnSuccess == nil {
-		OnSuccess = func() error { return nil }
+		OnSuccess = func(*DiscordOAuth2_Resp_Token) error { return nil }
 	}
 
 	if OnError == nil {
-		OnError = func() error { return nil }
+		OnError = func(error) error { return nil }
+	}
+
+	// &scopeBuilder=identify%20guilds.join
+	var scopeBuilder = strings.Builder{}
+	for _, s := range scopes {
+		scopeBuilder.WriteString(s)
+		scopeBuilder.WriteRune(' ')
 	}
 
 	return &DiscordOAuth2Client{
+		Token:        token,
 		clientID:     client_id,
 		clientSecret: client_secret,
 		guildID:      guild_id,
+		scope:        url.PathEscape(scopeBuilder.String()),
 		redirectURI:  url.QueryEscape(redirURL),
 		onSuccess:    OnSuccess,
 		onError:      OnError,
 		client:       &http.Client{},
-	}, nil
+	}
 }
 
-// /authorize?response_type=code&client_id=157730590492196864&scope=identify%20guilds.join&state=15773059ghq9183habn&redirect_uri=https%3A%2F%2Fnicememe.website&prompt=consent&integration_type=0
-// Redir: /callback?code=XXX&state=XXX
+// redirects to discord's oauth2/authorize
 func (oauth2 *DiscordOAuth2Client) HandlerAuthorize(w http.ResponseWriter, r *http.Request) {
-	var url = fmt.Sprintf(
-		DISCORD_ENDPOINT_OAUTH2_AUTH+"?client_id=%s&redirect_uri=%s&response_type=code&scope=%s",
+	var url = strings.Builder{}
+	url.WriteString(DISCORD_ENDPOINT_OAUTH2_AUTH)
+	url.WriteString(fmt.Sprintf(
+		"?response_type=code&client_id=%s&scope=%s&redirect_uri=%s",
 		oauth2.clientID,
+		oauth2.scope,
 		oauth2.redirectURI,
-		"SCOPE",
-	)
+	))
 
-	// redir to discord auth
-	http.Redirect(w, r, url, http.StatusPermanentRedirect)
+	http.Redirect(w, r, url.String(), http.StatusPermanentRedirect)
 }
 
-func (oauth2 *DiscordOAuth2Client) HandlerAuthorizeCallback(w http.ResponseWriter, r *http.Request) {
+// handle discord callback and get Access-Token
+func (oauth2 *DiscordOAuth2Client) HandlerAuthorizeCallback(w http.ResponseWriter, r *http.Request) error {
 	// wir bekommen: GET /callback?code=XXX&state=XXX
+	var code string
+
+	//!
 	//r.URL.Query()
 	//r.Form
 	//r.FormValue()
 	// 'code', 'state'
 
-	// code zu token machen (exchange_code)
+	// Get Access Token
+	access_token, err := oauth2.ExchangeCode_for_accessToken(code)
+	if err != nil {
+		return oauth2.onError(err)
+	}
 
-	// user_info?
-
-	// add user to guild
+	return oauth2.onSuccess(access_token)
 }
 
-func (oauth2 *DiscordOAuth2Client) exchangeCode_for_accessToken(code string) (*DiscordOAuth2_Resp_Token, error) {
+/*
+> Discord Documentation
+* https://discord.com:2053/developers/docs/topics/oauth2#authorization-code-grant-access-token-response
+*/
+func (oauth2 *DiscordOAuth2Client) ExchangeCode_for_accessToken(code string) (*DiscordOAuth2_Resp_Token, error) {
 	// JSON Body
 	jsonBody, err := json.Marshal(
 		&DiscordOAuth2_Req_Token{
@@ -210,7 +196,11 @@ func (oauth2 *DiscordOAuth2Client) exchangeCode_for_accessToken(code string) (*D
 	return &accessTokenResp, nil
 }
 
-func (oauth2 *DiscordOAuth2Client) exchangeRefreshToken_for_AccessToken(refresh_token string) (*DiscordOAuth2_Resp_Token, error) {
+/*
+> Discord Documentation
+* https://discord.com:2053/developers/docs/topics/oauth2#authorization-code-grant-refresh-token-exchange-example
+*/
+func (oauth2 *DiscordOAuth2Client) ExchangeRefreshToken_for_AccessToken(refresh_token string) (*DiscordOAuth2_Resp_Token, error) {
 	// JSON Body
 	jsonBody, err := json.Marshal(
 		&DiscordOAuth2_Req_Refresh_Token{
@@ -259,62 +249,113 @@ func (oauth2 *DiscordOAuth2Client) exchangeRefreshToken_for_AccessToken(refresh_
 	return &accessTokenResp, nil
 }
 
-/* REFRESH_TOKEN (:REFRESH_TOKEN)
-=> f'{OAuth2.api_endpoint}/oauth2/token'
-	POST:
-		HEADER:
-			{
-            'Content-Type': 'application/x-www-form-urlencoded'
-            }
-		DATA:
-			{
-            'client_id': OAuth2.client_id,
-            'client_secret': OAuth2.client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': refresh_token
-            }
-
-	RESPONSE:
-		{
-            "access_token": r.json().get("access_token"),
-            "refresh_token": r.json().get("refresh_token")
-        }
+/*
+> Discord Documentation
+* https://discord.com:2053/developers/docs/resources/user#get-current-user
+Returns the user object of the requester's account.
+For OAuth2, this requires the identify scope,
+which will return the object without an email,
+and optionally the email scope,
+which returns the object with an email if the user has one.
 */
+func (oauth2 *DiscordOAuth2Client) GetUser(access_token string) (*discordgo.User, error) {
+	// HTTP GET
+	req, err := http.NewRequest(
+		"GET",
+		DISCORD_ENDPOINT_API_USERS_ME,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-/* GET USER INFO (:ACCESS_TOKEN)
-=> OAuth2.api_endpoint + "/users/@me"
+	// Header
+	req.Header.Set(
+		"Authorization", fmt.Sprintf("Bearer %s", access_token),
+	)
 
-	GET:
-		HEADERS:
-			{
-            "Authorization": f"Bearer {access_token}"
-            }
+	// Do Request
+	resp, err := oauth2.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 
-	RESPONSE:
-		{
-            "username": user_object.get("username") + "#" + user_object.get("discriminator"),
-            "id": user_object.get("id"),
-            "email": user_object.get("email"),
-            "locale": user_object.get("locale")
-    	}
-*/
+	// valid Response?
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("response status-Code != 200")
+	}
+
+	var discordUser discordgo.User
+	if err := json.NewDecoder(resp.Body).Decode(&discordUser); err != nil {
+		return nil, err
+	}
+
+	return &discordUser, nil
+}
 
 /*
-@app.route("/callback", methods=["GET"])
-def callback():
-    code = request.args.get("code")
-    tokens = OAuth2.exchange_code(code)
-    user_object = OAuth2.get_user_info(tokens.get("access_token"))
-
-    to_save_data = {
-        "username": user_object.get("username"),
-        "id": user_object.get("id"),
-        "email": user_object.get("email"),
-        "locale": user_object.get("locale"),
-        "refresh_token": tokens.get("refresh_token")
-        }
-
-    # save(to_save_data)
-
-    return render_template("callback.html")
+> Discord Documentation
+* https://discord.com:2053/developers/docs/resources/guild#add-guild-member
+Adds a user to the guild,
+provided you have a valid oauth2 access token
+for the user with the guilds.join scope.
+Returns a 201 Created with the guild member as the body,
+or 204 No Content if the user is already a member of the guild.
 */
+func (oauth2 *DiscordOAuth2Client) AddGuildMember(user_id string) error {
+	var url = fmt.Sprintf(
+		DISCORD_ENDPOINT_API_GUILD+"/%s/members/%s",
+		oauth2.guildID,
+		user_id,
+	)
+
+	// JSON Body
+	jsonBody, err := json.Marshal(
+		&DiscordAPI_Req_Guild_Join{
+			Access_Token: oauth2.Token,
+			Roles:        []string{"MEMBER ROLE ID"}, //!
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// HTTP PUT
+	req, err := http.NewRequest(
+		"PUT",
+		url,
+		bytes.NewBuffer(jsonBody),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Header
+	req.Header.Set(
+		"Authorization", oauth2.Token,
+	)
+	req.Header.Set(
+		"Content-Type", "application/json",
+	)
+
+	// Do Request
+	resp, err := oauth2.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// valid Response?
+	switch resp.StatusCode {
+	case http.StatusCreated:
+		// user added
+		return nil
+
+	case http.StatusNoContent:
+		// user already added
+		return nil
+
+	default:
+		return fmt.Errorf("response status-Code != [201, 204]")
+	}
+}
