@@ -1,8 +1,4 @@
 name: golangci-lint
-uses: golangci/golangci-lint-action@v4
-with:
-  version: v1.56.2
-
 on:
   push:
     branches:
@@ -26,4 +22,4 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1
+          version: v2.4
