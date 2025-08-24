@@ -1,4 +1,8 @@
 name: golangci-lint
+uses: golangci/golangci-lint-action@v4
+with:
+  version: v1.56.2
+
 on:
   push:
     branches:
@@ -15,7 +19,7 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: stable
