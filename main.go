@@ -1,5 +1,5 @@
 /*
-* Suplex
+* Suplex - Gewalt | Macht | Ordnung
  */
 
 package main
