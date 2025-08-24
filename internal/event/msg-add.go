@@ -1,17 +1,28 @@
 package event
 
 import (
-	"suplex/internal"
-
+	"github.com/Dr-Deep/Suplex.git/internal"
 	"github.com/bwmarrin/discordgo"
 )
 
-type MessageAddHandler struct {
-	*internal.Suplex
+type EventMessageCreate struct {
+	*internal.SuplexBot
 }
 
-func NewMessageAddHandler(self *internal.Suplex) *MessageAddHandler {
-	return &MessageAddHandler{self}
+func NewMessageCreate(bot *internal.SuplexBot) *EventMessageCreate {
+	return &EventMessageCreate{SuplexBot: bot}
 }
 
-func (h *MessageAddHandler) Exec(s *discordgo.Session, e *discordgo.MessageCreate) {}
+func (bot *EventMessageCreate) Exec(s *discordgo.Session, ev *discordgo.MessageCreate) {
+
+	// Ignore all messages created by the bot itself
+	if ev.Author.ID == s.State.User.ID {
+		return
+	}
+
+	if ev.Author.Bot {
+		return
+	}
+
+	// uwuify?
+}

@@ -1,102 +1,103 @@
+/*
+* Suplex
+ */
+
 package main
 
 import (
-	"suplex/internal"
-	"suplex/internal/command"
-	"suplex/internal/config"
-	"suplex/internal/event"
-	"suplex/internal/log"
+	"flag"
+	"os"
 
-	"github.com/bwmarrin/discordgo"
-)
-
-const (
-	configFilePath = "./config.json"
+	"github.com/Dr-Deep/Suplex.git/internal"
+	"github.com/Dr-Deep/Suplex.git/internal/config"
+	"github.com/Dr-Deep/Suplex.git/internal/database"
+	"github.com/Dr-Deep/logging-go"
 )
 
 var (
+	suplex *internal.SuplexBot
+	logger *logging.Logger
 	cfg    *config.Configuration
-	logger *log.Logger
-	//db
+	db     *database.Database
+
+	// Flags
+	logFilePath = flag.String(
+		"logfile",
+		"",
+		"file to redirect logs to",
+	)
+	logLevel = flag.String(
+		"loglevel",
+		"info",
+		"log level ('debug', 'info', 'error', 'fatal', 'none')",
+	)
+	configFilePath = flag.String(
+		"config",
+		"./config.yml",
+		"configuration file",
+	)
+	databaseFilePath = flag.String(
+		"database",
+		"./suplex.db",
+		"database file",
+	)
+
+	// Signals
+	crashSignals    = make(chan struct{}, 1)
+	interuptSignals = make(chan os.Signal, 1)
+	reloadSignals   = make(chan os.Signal, 1)
 )
 
-func init() {
-	var err error
-
-	// Config
-	cfg, err = config.ParseConfigFromJSONFile(configFilePath)
+func setup() {
+	_logger, err := internal.InitLogger(*logFilePath, *logLevel)
 	if err != nil {
 		panic(err)
 	}
 
-	// Logger
-	logger, err = log.NewLogger(
-		cfg.Logging.Method,
-		cfg.Logging.File,
-		cfg.Logging.Level,
-	)
+	_cfg, err := internal.InitConfig(*configFilePath)
 	if err != nil {
 		panic(err)
 	}
 
-	//?db
+	_db, err := internal.InitDatabase(*databaseFilePath)
+	if err != nil {
+		panic(err)
+	}
 
+	logger = _logger
+	cfg = _cfg
+	db = _db
 }
 
-func main() {
+func initSuplex() *internal.SuplexBot {
+	_suplex := internal.NewSuplexBot(
+		logger,
+		cfg,
+		db,
+	)
 
-	suplex, err := internal.NewSuplex(cfg, logger)
-	if err != nil {
-		panic(err)
-	}
-
-	//?
-	suplex.Session.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
+	// register stuff?
 
 	/*
-	 * Register Events
+	* Register Events
 	 */
-	suplex.Session.AddHandler(event.NewReadyHandler(suplex).Exec)
-	suplex.Session.AddHandler(event.NewMessageAddHandler(suplex).Exec)
-	suplex.Session.AddHandler(event.NewInteractionAdd(suplex).Exec)
-	suplex.Session.AddHandler(event.NewDefaultHandler(suplex).Exec)
+	suplex.Session.AddHandler()
 
 	/*
 	 * Register Commands
 	 */
 
-	suplex.Handler.RegisterCommand(command.NewTestCommand(suplex))
-	suplex.Handler.RegisterCommand(command.NewNekoCommand(suplex))
-
-	// Start Bot
-	suplex.Start()
-
-	// Stop Bot
-	suplex.Stop()
+	return _suplex
 }
 
-/*
 func main() {
-    // Register the slash command with Discord
-    command := &discordgo.ApplicationCommand{
-        Name:        "ping",
-        Description: "Responds with Pong!",
-    }
-    _, err = discord.ApplicationCommandCreate(discord.State.User.ID, "", command)
-    if err != nil {
-        log.Fatal("Error creating slash command: ", err)
-    }
+	flag.Parse()
+	setup()
+	defer logger.Close()
 
+	// Suplex Bot
+	err := suplex.Launch()
+	if err != nil {
+		logger.Fatal("launch error", err.Error())
+	}
 }
-
-func handleSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
-    if i.ApplicationCommandData().Name == "ping" {
-        s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-            Type: discordgo.InteractionResponseChannelMessageWithSource,
-            Data: &discordgo.InteractionResponseData{
-                Content: "Pong!",
-            },
-        })
-    }
-}
-*/

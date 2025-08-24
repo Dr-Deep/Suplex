@@ -1,9 +1,0 @@
-{
-    "token": "",
-
-    "logging": {
-        "method": ["stdout", "file"],
-        "file": "suplex.log",
-        "level": "info"
-    }
-}

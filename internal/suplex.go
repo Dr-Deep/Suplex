@@ -4,140 +4,170 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"suplex/internal/config"
-	"suplex/internal/log"
+	"sync"
 	"syscall"
 
+	"github.com/Dr-Deep/Suplex.git/internal/config"
+	"github.com/Dr-Deep/Suplex.git/internal/database"
+	"github.com/Dr-Deep/logging-go"
 	"github.com/bwmarrin/discordgo"
 )
 
-type Suplex struct {
-	// Session
+type SuplexBot struct {
+	// cmd handler
+	// event handler?
+	// middleware?
+
+	//
 	Session *discordgo.Session
 
 	//
-	Handler *CommandHandler
+	Logger *logging.Logger
+	Cfg    *config.Configuration
+	DB     *database.Database
 
-	// Database
-	//Database *database.DB
+	// Signals
+	interuptSignals chan os.Signal
+	reloadSignals   chan os.Signal
 
-	// Config
-	Config *config.Configuration
-
-	// Logger
-	Logger *log.Logger
-
-	// Runtime Signals
-	exitSignal    chan os.Signal
-	restartSignal chan os.Signal
+	sync.Mutex
 }
 
-func NewSuplex(cfg *config.Configuration, logger *log.Logger) (*Suplex, error) {
-	var suplex = &Suplex{
-		Session: nil,
-		Handler: &CommandHandler{cmdMap: map[string]*Command{}},
-		//Database: db,
-		Config:        cfg,
-		Logger:        logger,
-		exitSignal:    make(chan os.Signal),
-		restartSignal: make(chan os.Signal),
+func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *database.Database) *SuplexBot {
+	var bot = &SuplexBot{
+		//
+
+		Logger: nil,
+		Cfg:    nil,
+		DB:     nil,
+
+		interuptSignals: make(chan os.Signal, 1),
+		reloadSignals:   make(chan os.Signal, 1),
 	}
 
-	session, err := discordgo.New("Bot " + suplex.Config.Token)
-	if err != nil {
-		return nil, err
-	}
-
-	suplex.Session = session
-
-	return suplex, err
+	return bot
 }
 
-func (bot *Suplex) Start() {
-	signal.Notify(
-		bot.exitSignal,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-	)
-	signal.Notify(
-		bot.restartSignal,
-		syscall.SIGUSR1,
-		syscall.SIGUSR2,
-	)
+func (bot *SuplexBot) Launch() error {
+	bot.Lock()
 
+	bot.Logger.Info("launching...")
+
+	// Signals
+	{
+		signal.Notify(
+			bot.interuptSignals,
+			syscall.SIGINT,
+			syscall.SIGTERM,
+		)
+		/*
+			signal.Notify(
+				bot.reloadSignals,
+				syscall.SIGUSR1,
+				syscall.SIGUSR2,
+			)
+		*/
+	}
+
+	// Discord Session
+	{
+		session, err := discordgo.New(bot.Cfg.Discord_Settings.Token)
+		if err != nil {
+			return err
+		}
+
+		/*
+			//?? Intents
+			session.Identify.Intents |= discordgo.IntentAutoModerationExecution
+			session.Identify.Intents |= discordgo.IntentMessageContent
+			dg.Identify.Intents = discordgo.IntentsGuildMessages
+		*/
+
+		// Open Websocket
+		if err := session.Open(); err != nil {
+			return err
+		}
+
+		bot.Session = session
+	}
+
+	// add slash cmds ?
+
+	bot.Unlock()
 	bot.run()
+
+	return nil
 }
 
-func (bot *Suplex) run() {
-	defer bot.handlePanic()
+func (bot *SuplexBot) Reload() {
+	bot.Lock()
+	bot.Logger.Info("reloading...")
 
-	if err := bot.Session.Open(); err != nil {
+	//
+	_logger, err := InitLogger(_logFilePath, _logLevel)
+	if err != nil {
 		panic(err)
 	}
 
-	for {
-		select {
-		case <-bot.exitSignal:
-			bot.Stop()
-			return
-
-		case <-bot.restartSignal:
-			return
-		}
-
-	}
-}
-
-func (bot *Suplex) Restart() {}
-
-func (bot *Suplex) Stop() {
-	bot.Logger.Info("(*Suplex).Stop()", "stopping Bot...")
-
-	bot.Session.Close()
-	//db
-	bot.Logger.Close()
-
-	os.Exit(0)
-}
-
-func (bot *Suplex) handlePanic() {
-	if r := recover(); r != nil {
-		bot.Logger.Error("(*Suplex).handlePanic()", "Panic-Reason", fmt.Sprintf("%#v", r))
-		bot.Logger.Error("(*Suplex).handlePanic()", "trying to restart...")
-		//? restart
-	}
-}
-
-func (bot *Suplex) ReregisterAllCommands() {
-	//unregister all
-	cmds, err := bot.Session.ApplicationCommands(
-		bot.Session.State.User.ID,
-		"",
-	)
+	_cfg, err := InitConfig(_configFilePath)
 	if err != nil {
-		//?
+		panic(err)
 	}
 
-	if len(cmds) > 0 {
-		for _, command := range cmds {
-			bot.Session.ApplicationCommandDelete(
-				bot.Session.State.User.ID,
-				"",
-				command.ID,
-			)
-		}
+	_db, err := InitDatabase(_databaseFilePath)
+	if err != nil {
 	}
 
 	//
-	for _, cmd := range bot.Handler.cmdMap {
-		if _, err := bot.Session.ApplicationCommandCreate(
-			bot.Session.State.User.ID,
-			"",
-			cmd.ApplicationCommand,
-		); err != nil {
-			bot.Logger.Error("(*Suplex).ReregisterAllCommands()", "skipping because of an error...", cmd.Name, err.Error())
-			continue
+	bot.Logger = _logger
+	bot.Cfg = _cfg
+	bot.DB = _db
+
+	bot.Logger.Info("reloaded!")
+	bot.Unlock()
+}
+
+func (bot *SuplexBot) Shutdown() {
+	bot.Lock()
+	bot.Logger.Info("shutdown...")
+
+	// remove slash cmds
+
+	// Discord Session
+	bot.Session.Close()
+
+	// Signals
+	signal.Stop(bot.interuptSignals)
+	close(bot.interuptSignals)
+	close(bot.reloadSignals)
+
+	// running things?
+	//
+}
+
+func (bot *SuplexBot) run() {
+	//defer handlepanic ?
+
+	// log
+
+	for {
+		select {
+		case <-bot.interuptSignals:
+			bot.Logger.Info("catched SIGINT/SIGTERM")
+			bot.Shutdown()
+			return
+
+		case <-bot.reloadSignals:
+			bot.Reload()
 		}
 	}
 
+}
+
+func (bot *SuplexBot) handlePanic() {
+	if r := recover(); r != nil {
+		bot.Logger.Error("PANIC", fmt.Sprintf("%#v", r))
+		bot.Logger.Info("trying to restart...")
+		bot.Shutdown()
+	}
 }

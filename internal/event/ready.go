@@ -1,22 +1,26 @@
 package event
 
 import (
-	"suplex/internal"
+	"fmt"
 
+	"github.com/Dr-Deep/Suplex.git/internal"
 	"github.com/bwmarrin/discordgo"
 )
 
-type ReadyHandler struct {
-	*internal.Suplex
+type EventReadyHandler struct {
+	*internal.SuplexBot
 }
 
-func NewReadyHandler(self *internal.Suplex) *ReadyHandler {
-	return &ReadyHandler{self}
+func NewReady(bot *internal.SuplexBot) *EventReadyHandler {
+	return &EventReadyHandler{SuplexBot: bot}
 }
 
-func (h *ReadyHandler) Exec(s *discordgo.Session, e *discordgo.Ready) {
-	h.Logger.Info("Ready", "Bot up as", e.User.Username)
+func (bot *EventReadyHandler) Exec(s *discordgo.Session, ev *discordgo.Ready) {
+	bot.Logger.Info(
+		"READY",
+		fmt.Sprintf("Username: '%s' ID: '%s'", ev.User.Username, ev.User.ID),
+	)
 
-	// Register All registered Slash-Commands
-	h.ReregisterAllCommands()
+	// Register Slash Commands
+	//? aus ireiner liste
 }

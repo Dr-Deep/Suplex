@@ -1,11 +1,14 @@
 package config
 
-type Configuration struct {
-	Token string `json:"token"`
+type DiscordConfig struct {
+	Token          string
+	Application_ID string
+	Client_ID      string
+	Client_Secret  string
+	PublicKey      string
+	Guild_ID       string
+}
 
-	Logging struct {
-		Method []string `json:"method"`
-		File   string   `json:"file"`
-		Level  string   `json:"level"`
-	} `json:"logging"`
+type Configuration struct {
+	Discord_Settings DiscordConfig
 }

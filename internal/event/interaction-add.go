@@ -1,19 +1,22 @@
+/*
+ * Slash Command Handler
+ */
+
 package event
 
 import (
-	"suplex/internal"
-
+	"github.com/Dr-Deep/Suplex.git/internal"
 	"github.com/bwmarrin/discordgo"
 )
 
-type InteractionAdd struct {
-	*internal.Suplex
+type EventInteractionCreateHandler struct {
+	*internal.SuplexBot
 }
 
-func NewInteractionAdd(self *internal.Suplex) *InteractionAdd {
-	return &InteractionAdd{self}
+func NewInteractionCreate(bot *internal.SuplexBot) *EventInteractionCreateHandler {
+	return &EventInteractionCreateHandler{SuplexBot: bot}
 }
 
-func (h *InteractionAdd) Exec(s *discordgo.Session, e *discordgo.InteractionCreate) {
-	h.Handler.Handle(e)
+func (bot *EventInteractionCreateHandler) Exec(s *discordgo.Session, ev *discordgo.InteractionCreate) {
+	//? slash cmd handler
 }
