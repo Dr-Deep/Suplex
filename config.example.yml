@@ -1,7 +1,9 @@
-Discord_Settings:
-  Token: "Bot "
+discord:
+  Token: ""
   Application_ID: ""
   Client_ID: ""
   Client_Secret: ""
   PublicKey: ""
   Guild_ID: ""
+
+Assets_Dir: "./assets"

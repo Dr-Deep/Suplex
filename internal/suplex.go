@@ -81,6 +81,12 @@ func (bot *SuplexBot) Launch() error {
 			session.Identify.Intents |= discordgo.IntentAutoModerationExecution
 			session.Identify.Intents |= discordgo.IntentMessageContent
 			dg.Identify.Intents = discordgo.IntentsGuildMessages
+
+
+			// Intents setzen (sonst funktionieren Join-Events nicht)
+			dg.Identify.Intents = discordgo.IntentsGuilds |
+			discordgo.IntentsGuildMessages |
+			discordgo.IntentsGuildMembers
 		*/
 
 		// Open Websocket

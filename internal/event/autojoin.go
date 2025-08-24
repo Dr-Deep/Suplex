@@ -1,11 +1,12 @@
+/*
+ * Anti Guild Leave System
+ */
 package event
 
 import (
 	"github.com/Dr-Deep/Suplex.git/internal"
 	web "github.com/Dr-Deep/Suplex.git/web/src"
 	"github.com/bwmarrin/discordgo"
-
-	_ "github.com/zekroTJA/shinpuru/pkg/discordoauth/v2"
 )
 
 type AutojoinHandler struct {
@@ -18,6 +19,12 @@ func NewAutojoin_Handler(bot *internal.SuplexBot) *AutojoinHandler {
 }
 
 func (bot *AutojoinHandler) Exec_GuildMemberAdd(s *discordgo.Session, ev *discordgo.GuildMemberAdd) {
+	// no bots
+	if ev.User.Bot {
+		return
+	}
+
+	// OAuth2 ?
 	if bot.oauth2 == nil {
 		bot.oauth2 = web.NewDiscordOAuth2(
 			bot.Cfg.Discord_Settings.Token,
@@ -29,7 +36,19 @@ func (bot *AutojoinHandler) Exec_GuildMemberAdd(s *discordgo.Session, ev *discor
 			nil, // OnSuccess web.OnSuccessFunc
 			nil, //  OnError web.OnErrorFunc
 		)
+	} else {
+		// nur die OnSuccess web.OnSuccessFunc ;  OnError web.OnErrorFunc
 	}
+
+	// notify user per DM
+	s.ChannelMessageSendEmbed(
+		ev.User.ID,
+		//! auf oauth2 verify link
+		&discordgo.MessageEmbed{},
+	)
+
+	// on success: role
+	// wenn nd prison
 
 	/*
 	 * per DM, discord oauth2 link für API perms
