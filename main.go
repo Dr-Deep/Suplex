@@ -43,11 +43,14 @@ var (
 )
 
 func initSuplex() *internal.SuplexBot {
-	_suplex := internal.NewSuplexBot(
+	_suplex, err := internal.NewSuplexBot(
 		logger,
 		cfg,
 		db,
 	)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
 
 	/*
 	* Register Events

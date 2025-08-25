@@ -35,18 +35,25 @@ type SuplexBot struct {
 	sync.Mutex
 }
 
-func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *database.Database) *SuplexBot {
+func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *database.Database) (*SuplexBot, error) {
+
+	session, err := discordgo.New(cfg.Discord_Settings.Token)
+	if err != nil {
+		return nil, err
+	}
+
 	var bot = &SuplexBot{
-		Logger: nil,
-		Cfg:    nil,
-		DB:     nil,
+		Session: session,
+		Logger:  nil,
+		Cfg:     nil,
+		DB:      nil,
 
 		interuptSignals: make(chan os.Signal, 1),
 		reloadSignals:   make(chan os.Signal, 1),
 	}
 	bot.CommandHandler = NewCommandHandler(bot)
 
-	return bot
+	return bot, nil
 }
 
 func (bot *SuplexBot) Launch() error {
@@ -79,8 +86,8 @@ func (bot *SuplexBot) Launch() error {
 
 		// Extended Logging
 		if bot.Logger.Level == logging.LogDebug {
-			session.Debug = true
-			session.LogLevel = discordgo.LogDebug
+			//session.Debug = true
+			//session.LogLevel = discordgo.LogDebug
 		}
 
 		/*

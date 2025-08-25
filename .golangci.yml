@@ -11,6 +11,9 @@ version: "2"
 linters:
   default: all
 
+  enable:
+    - wsl_v5
+
   # Disable specific linters.
   disable:
     - errcheck
@@ -24,6 +27,7 @@ linters:
     - ireturn
     - wrapcheck
     - tagliatelle
+    - wsl
 
   # All available settings of specific linters.
   settings:
@@ -42,3 +46,8 @@ linters:
       # Minimal complexity of if statements to report.
       # Default: 5
       min-complexity: 4
+
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
