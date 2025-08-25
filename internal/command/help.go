@@ -16,7 +16,7 @@ func NewHelpCommand(bot *internal.SuplexBot) *internal.Command {
 		Exec: cmd.Exec,
 		ApplicationCommand: &discordgo.ApplicationCommand{
 			Name:        "help",
-			Description: "descr",
+			Description: "Help Command",
 			//? Type              ApplicationCommandType
 			//? Options           []*ApplicationCommandOption
 			//? IntegrationTypes *[]ApplicationIntegrationType
@@ -25,9 +25,8 @@ func NewHelpCommand(bot *internal.SuplexBot) *internal.Command {
 }
 
 func (cmd *HelpCommand) Exec(s *discordgo.Session, ev *discordgo.Interaction) {
-	// embed? mit liste von commands
 
-	//? klappts?
+	// Build Help-Embed
 	var fields []*discordgo.MessageEmbedField
 	for _, cmd := range cmd.SuplexBot.CommandHandler.List() {
 		var (
@@ -46,8 +45,8 @@ func (cmd *HelpCommand) Exec(s *discordgo.Session, ev *discordgo.Interaction) {
 
 	// Response Embed
 	var help = &discordgo.MessageEmbed{
-		Type:        "help",
-		Description: "descr",
+		Type:        "Help",
+		Description: "List of Commands",
 		Fields:      fields,
 	}
 	// Fields      []*MessageEmbedField

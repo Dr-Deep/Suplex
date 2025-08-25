@@ -129,7 +129,10 @@ func (bot *SuplexBot) Launch() error {
 		}
 	}
 
-	// add slash cmds ?
+	// Slash-Commands
+	if err := bot.registerSlashCommands(); err != nil {
+		return err
+	}
 
 	bot.Unlock()
 	bot.run()
@@ -141,7 +144,6 @@ func (bot *SuplexBot) Reload() {
 	bot.Lock()
 	bot.Logger.Info("reloading...")
 
-	//
 	_logger, err := InitLogger(_logFilePath, _logLevel)
 	if err != nil {
 		panic(err)
@@ -156,7 +158,6 @@ func (bot *SuplexBot) Reload() {
 	if err != nil {
 	}
 
-	//
 	bot.Logger = _logger
 	bot.Cfg = _cfg
 	bot.DB = _db
@@ -169,7 +170,10 @@ func (bot *SuplexBot) Shutdown() {
 	bot.Lock()
 	bot.Logger.Info("shutdown...")
 
-	// remove slash cmds
+	// Unregister Slash-Commands
+	if err := bot.unregisterSlashCommands(); err != nil {
+		bot.Logger.Error("cannot delete slash command", err.Error())
+	}
 
 	// Discord Session
 	if err := bot.Session.Close(); err != nil {
@@ -182,7 +186,6 @@ func (bot *SuplexBot) Shutdown() {
 	close(bot.reloadSignals)
 
 	// running things?
-	//
 }
 
 func (bot *SuplexBot) run() {
@@ -205,7 +208,47 @@ func (bot *SuplexBot) run() {
 func (bot *SuplexBot) handlePanic() {
 	if r := recover(); r != nil {
 		bot.Logger.Error("PANIC", fmt.Sprintf("%#v", r))
-		bot.Logger.Info("trying to restart...")
 		bot.Shutdown()
 	}
+}
+
+func (bot *SuplexBot) unregisterSlashCommands() error {
+	// Bulk delete all existing Slash-Commands
+	existingCmds, err := bot.Session.ApplicationCommands(
+		bot.Cfg.Discord_Settings.Application_ID,
+		"",
+	)
+	if err != nil {
+		return err
+	}
+
+	if len(existingCmds) == 0 {
+		return nil
+	}
+
+	for _, cmd := range existingCmds {
+		bot.Session.ApplicationCommandDelete(
+			bot.Cfg.Discord_Settings.Application_ID,
+			"",
+			cmd.ID,
+		)
+	}
+
+	return nil
+}
+
+func (bot *SuplexBot) registerSlashCommands() error {
+	// Register Slash-Commands
+	for _, cmd := range bot.CommandHandler.List() {
+		if _, err := bot.Session.ApplicationCommandCreate(
+			bot.Cfg.Discord_Settings.Application_ID,
+			"",
+			cmd.ApplicationCommand,
+		); err != nil {
+			bot.Logger.Error("Cannot create slash command", cmd.ApplicationCommand.Name, err.Error())
+			return err
+		}
+	}
+
+	return nil
 }
