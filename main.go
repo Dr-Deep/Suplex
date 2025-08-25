@@ -8,8 +8,10 @@ import (
 	"flag"
 
 	"github.com/Dr-Deep/Suplex.git/internal"
+	"github.com/Dr-Deep/Suplex.git/internal/command"
 	"github.com/Dr-Deep/Suplex.git/internal/config"
 	"github.com/Dr-Deep/Suplex.git/internal/database"
+	"github.com/Dr-Deep/Suplex.git/internal/event"
 	"github.com/Dr-Deep/logging-go"
 )
 
@@ -53,15 +55,28 @@ func initSuplex() *internal.SuplexBot {
 	}
 
 	/*
-	* Register Events
+	 * Register Event-Handlers
 	 */
-	_suplex.Session.AddHandler(
-		_suplex.CommandHandler,
-	)
+	eventHandlers := []any{
+		_suplex.CommandHandler.Exec,
+		event.NewReady(_suplex).Exec,
+		event.NewWelcomeUserBannerHandler(_suplex).Exec,
+		event.NewAutojoin_Handler(_suplex).Exec_GuildMemberAdd,
+		event.NewAutojoin_Handler(_suplex).Exec_GuildMemberRemove,
+	}
+	for _, h := range eventHandlers {
+		_suplex.Session.AddHandler(h)
+	}
 
 	/*
-	 * Register Commands
+	 * Register Command-Handlers
 	 */
+	commandHandlers := []*internal.Command{
+		command.NewHelpCommand(_suplex),
+	}
+	for _, h := range commandHandlers {
+		_suplex.CommandHandler.Register(h)
+	}
 
 	return _suplex
 }

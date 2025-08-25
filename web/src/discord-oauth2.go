@@ -6,6 +6,7 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 )
+
+// TODO: discordgo kann auch bearer
 
 const (
 	// API
@@ -24,6 +27,12 @@ const (
 	DISCORD_ENDPOINT_OAUTH2       = DISCORD_ENDPOINT_API + "/oauth2"
 	DISCORD_ENDPOINT_OAUTH2_TOKEN = DISCORD_ENDPOINT_OAUTH2 + "/token"
 	DISCORD_ENDPOINT_OAUTH2_AUTH  = DISCORD_ENDPOINT_OAUTH2 + "/authorize"
+)
+
+// Error Types
+var (
+	ErrHTTPRespStatusCode              = errors.New("response status-code is not 200")
+	ErrHTTPRespStatusCodeNotAsExpected = errors.New("response status-code is not 201 or 204 as expected")
 )
 
 // Resp: status-code: [201, 204]
@@ -79,13 +88,13 @@ type DiscordOAuth2Client struct {
 type OnSuccessFunc func(*DiscordOAuth2_Resp_Token) error // ctx,route?,resp
 type OnErrorFunc func(error) error
 
-func NewDiscordOAuth2(token, client_id, client_secret, guild_id, redirURL string, scopes []string, OnSuccess OnSuccessFunc, OnError OnErrorFunc) *DiscordOAuth2Client {
-	if OnSuccess == nil {
-		OnSuccess = func(*DiscordOAuth2_Resp_Token) error { return nil }
+func NewDiscordOAuth2(token, client_id, client_secret, guild_id, redirURL string, scopes []string, onSuccess OnSuccessFunc, onError OnErrorFunc) *DiscordOAuth2Client {
+	if onSuccess == nil {
+		onSuccess = func(*DiscordOAuth2_Resp_Token) error { return nil }
 	}
 
-	if OnError == nil {
-		OnError = func(error) error { return nil }
+	if onError == nil {
+		onError = func(error) error { return nil }
 	}
 
 	// &scopeBuilder=identify%20guilds.join
@@ -102,8 +111,8 @@ func NewDiscordOAuth2(token, client_id, client_secret, guild_id, redirURL string
 		guildID:      guild_id,
 		scope:        url.PathEscape(scopeBuilder.String()),
 		redirectURI:  url.QueryEscape(redirURL),
-		onSuccess:    OnSuccess,
-		onError:      OnError,
+		onSuccess:    onSuccess,
+		onError:      onError,
 		client:       &http.Client{},
 	}
 }
@@ -185,7 +194,7 @@ func (oauth2 *DiscordOAuth2Client) ExchangeCode_for_accessToken(code string) (*D
 
 	// valid Response ?
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response status-Code != 200")
+		return nil, ErrHTTPRespStatusCode
 	}
 
 	var accessTokenResp DiscordOAuth2_Resp_Token
@@ -238,7 +247,7 @@ func (oauth2 *DiscordOAuth2Client) ExchangeRefreshToken_for_AccessToken(refresh_
 
 	// valid Response ?
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response status-Code != 200")
+		return nil, ErrHTTPRespStatusCode
 	}
 
 	var accessTokenResp DiscordOAuth2_Resp_Token
@@ -279,10 +288,11 @@ func (oauth2 *DiscordOAuth2Client) GetUser(access_token string) (*discordgo.User
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	// valid Response?
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response status-Code != 200")
+		return nil, ErrHTTPRespStatusCode
 	}
 
 	var discordUser discordgo.User
@@ -356,6 +366,6 @@ func (oauth2 *DiscordOAuth2Client) AddGuildMember(user_id, member_role_id string
 		return nil
 
 	default:
-		return fmt.Errorf("response status-Code != [201, 204]")
+		return ErrHTTPRespStatusCodeNotAsExpected
 	}
 }

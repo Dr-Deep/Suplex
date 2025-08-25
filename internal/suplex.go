@@ -14,10 +14,11 @@ import (
 )
 
 type SuplexBot struct {
+	sync.Mutex
+
 	// cmd handler
 	// event handler?
 	// middleware?
-
 	CommandHandler *CommandHandler
 
 	//
@@ -31,12 +32,10 @@ type SuplexBot struct {
 	// Signals
 	interuptSignals chan os.Signal
 	reloadSignals   chan os.Signal
-
-	sync.Mutex
 }
 
 func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *database.Database) (*SuplexBot, error) {
-
+	// New Discord Session
 	session, err := discordgo.New(cfg.Discord_Settings.Token)
 	if err != nil {
 		return nil, err
@@ -44,9 +43,9 @@ func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *databas
 
 	var bot = &SuplexBot{
 		Session: session,
-		Logger:  nil,
-		Cfg:     nil,
-		DB:      nil,
+		Logger:  logger,
+		Cfg:     cfg,
+		DB:      db,
 
 		interuptSignals: make(chan os.Signal, 1),
 		reloadSignals:   make(chan os.Signal, 1),
@@ -79,15 +78,10 @@ func (bot *SuplexBot) Launch() error {
 
 	// Discord Session
 	{
-		session, err := discordgo.New(bot.Cfg.Discord_Settings.Token)
-		if err != nil {
-			return err
-		}
-
 		// Extended Logging
 		if bot.Logger.Level == logging.LogDebug {
-			//session.Debug = true
-			//session.LogLevel = discordgo.LogDebug
+			bot.Session.Debug = true
+			bot.Session.LogLevel = discordgo.LogDebug
 		}
 
 		/*
@@ -97,10 +91,10 @@ func (bot *SuplexBot) Launch() error {
 		*/
 
 		// Should the session reconnect the websocket on errors.
-		session.ShouldReconnectOnError = true
+		bot.Session.ShouldReconnectOnError = true
 
 		// Whether or not to call event handlers synchronously.
-		session.SyncEvents = false
+		bot.Session.SyncEvents = false
 
 		/*
 			QUIC client in future?
@@ -127,14 +121,12 @@ func (bot *SuplexBot) Launch() error {
 			}
 		*/
 
-		session.Identify.Intents |= discordgo.IntentsAll
+		bot.Session.Identify.Intents |= discordgo.IntentsAll
 
 		// Open Websocket
-		if err := session.Open(); err != nil {
+		if err := bot.Session.Open(); err != nil {
 			return err
 		}
-
-		bot.Session = session
 	}
 
 	// add slash cmds ?
@@ -180,7 +172,9 @@ func (bot *SuplexBot) Shutdown() {
 	// remove slash cmds
 
 	// Discord Session
-	bot.Session.Close()
+	if err := bot.Session.Close(); err != nil {
+		bot.Logger.Error("Session closed with error", err.Error())
+	}
 
 	// Signals
 	signal.Stop(bot.interuptSignals)
@@ -192,9 +186,7 @@ func (bot *SuplexBot) Shutdown() {
 }
 
 func (bot *SuplexBot) run() {
-	//defer handlepanic ?
-
-	// log
+	defer bot.handlePanic()
 
 	for {
 		select {

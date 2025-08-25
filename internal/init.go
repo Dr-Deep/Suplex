@@ -85,7 +85,11 @@ func InitConfig(configFilePath string) (*config.Configuration, error) {
 
 func InitDatabase(databaseFilePath string) (*database.Database, error) {
 	_databaseFilePath = databaseFilePath
-	// *databaseFilePath
 
-	return nil, nil
+	db, err := database.NewDatabase(databaseFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

@@ -10,8 +10,8 @@ import (
 )
 
 type AutojoinHandler struct {
-	oauth2 *web.DiscordOAuth2Client
 	*internal.SuplexBot
+	oauth2 *web.DiscordOAuth2Client
 }
 
 func NewAutojoin_Handler(bot *internal.SuplexBot) *AutojoinHandler {
@@ -41,11 +41,15 @@ func (bot *AutojoinHandler) Exec_GuildMemberAdd(s *discordgo.Session, ev *discor
 	}
 
 	// notify user per DM
-	s.ChannelMessageSendEmbed(
+	_, err := s.ChannelMessageSendEmbed(
 		ev.User.ID,
 		//! auf oauth2 verify link
 		&discordgo.MessageEmbed{},
 	)
+	if err != nil {
+		//! log err
+		return
+	}
 
 	// on success: role
 	// wenn nd prison
@@ -65,9 +69,8 @@ func (bot *AutojoinHandler) Exec_GuildMemberRemove(s *discordgo.Session, ev *dis
 }
 
 /*
-
 	//! store *DiscordOAuth2_Resp_Token in DB
-// Get UserID
+	// Get UserID
 	user, err := oauth2.GetUser(access_token.Access_Token)
 	if err != nil {
 		//?
@@ -78,12 +81,12 @@ func (bot *AutojoinHandler) Exec_GuildMemberRemove(s *discordgo.Session, ev *dis
 	if err := oauth2.AddGuildMember(user.ID); err != nil {
 		//?
 	}
-*/
 
-/*
-Having the user's access token allows your application to make certain requests to the API on their behalf, restricted to whatever scopes were requested. expires_in is how long, in seconds, until the returned access token expires, allowing you to anticipate the expiration and refresh the token. To refresh, make another POST request to the token URL with the following parameters:
 
-    grant_type - must be set to refresh_token
-    refresh_token - the user's refresh token
-
+Having the user's access token allows your application to make certain requests to the API on their behalf,
+restricted to whatever scopes were requested. expires_in is how long, in seconds,
+until the returned access token expires, allowing you to anticipate the expiration and refresh the token.
+To refresh, make another POST request to the token URL with the following parameters:
+* grant_type - must be set to refresh_token
+* refresh_token - the user's refresh token
 */

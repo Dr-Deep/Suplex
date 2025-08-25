@@ -26,19 +26,21 @@ const (
 	bannerBackgroundImagePath = "/background.png"
 	bannerFontFacePoints      = 32
 	bannerFontFacePath        = "/BebasNeue-Regular.ttf" //? replit font
+
+	bannerAvatarSize = 128
 )
 
 type WelcomeUserBannerHandler struct {
+	*internal.SuplexBot
 	bannerImg  image.Image
 	avatarSize int
 
 	memberCount int
-	*internal.SuplexBot
 }
 
 func NewWelcomeUserBannerHandler(bot *internal.SuplexBot) *WelcomeUserBannerHandler {
 	var h = &WelcomeUserBannerHandler{
-		avatarSize: 128,
+		avatarSize: bannerAvatarSize,
 		SuplexBot:  bot,
 	}
 
@@ -155,7 +157,5 @@ func (bot *WelcomeUserBannerHandler) drawWelcomeUserBanner(user *discordgo.User,
 	)
 
 	// Encode Banner Image as PNG
-	png.Encode(buf, bannerImg.Image())
-
-	return nil
+	return png.Encode(buf, bannerImg.Image())
 }

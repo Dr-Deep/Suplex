@@ -20,8 +20,8 @@ if *RemoveCommands {
 */
 
 type CommandHandler struct {
-	cmdMap sync.Map
 	*SuplexBot
+	cmdMap sync.Map
 }
 
 func NewCommandHandler(bot *SuplexBot) *CommandHandler {
@@ -42,7 +42,7 @@ func (bot *CommandHandler) Register(cmd *Command) {
 	// Store Command
 	bot.cmdMap.Store(
 		cmd.ApplicationCommand.Name,
-		cmd, //? cmd.Exec direkt
+		cmd,
 	)
 }
 
