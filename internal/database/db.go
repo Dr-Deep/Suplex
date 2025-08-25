@@ -10,6 +10,7 @@ type Database struct {
 	db *sql.DB
 }
 
+// wenn es die nd gibt, erstellen
 func Open(databaseFilePath string) (*Database, error) {
 	db, err := sql.Open("sqlite3", "FILE")
 	if err != nil {

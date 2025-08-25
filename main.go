@@ -1,12 +1,11 @@
 /*
-* Suplex - Gewalt | Macht | Ordnung
+ * Suplex - Gewalt | Macht | Ordnung
  */
 
 package main
 
 import (
 	"flag"
-	"os"
 
 	"github.com/Dr-Deep/Suplex.git/internal"
 	"github.com/Dr-Deep/Suplex.git/internal/config"
@@ -41,12 +40,28 @@ var (
 		"./suplex.db",
 		"database file",
 	)
-
-	// Signals
-	crashSignals    = make(chan struct{}, 1)
-	interuptSignals = make(chan os.Signal, 1)
-	reloadSignals   = make(chan os.Signal, 1)
 )
+
+func initSuplex() *internal.SuplexBot {
+	_suplex := internal.NewSuplexBot(
+		logger,
+		cfg,
+		db,
+	)
+
+	/*
+	* Register Events
+	 */
+	_suplex.Session.AddHandler(
+		_suplex.CommandHandler,
+	)
+
+	/*
+	 * Register Commands
+	 */
+
+	return _suplex
+}
 
 func setup() {
 	_logger, err := internal.InitLogger(*logFilePath, *logLevel)
@@ -67,27 +82,7 @@ func setup() {
 	logger = _logger
 	cfg = _cfg
 	db = _db
-}
-
-func initSuplex() *internal.SuplexBot {
-	_suplex := internal.NewSuplexBot(
-		logger,
-		cfg,
-		db,
-	)
-
-	// register stuff?
-
-	/*
-	* Register Events
-	 */
-	suplex.Session.AddHandler()
-
-	/*
-	 * Register Commands
-	 */
-
-	return _suplex
+	suplex = initSuplex()
 }
 
 func main() {

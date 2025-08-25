@@ -23,3 +23,12 @@ func NewAutoVCHandler(bot *internal.SuplexBot) *AutoVC_Handler {
 }
 
 //func  (bot *AutoVC_Handler) Exec(s *discordgo.Session, ev *discordgo.)
+
+/* discordgo.Session
+   // Should voice connections reconnect on a session reconnect.
+   ShouldReconnectVoiceOnSessionError bool
+
+
+	// Stores a mapping of guild id's to VoiceConnections
+	VoiceConnections map[string]*VoiceConnection
+*/

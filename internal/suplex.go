@@ -18,6 +18,8 @@ type SuplexBot struct {
 	// event handler?
 	// middleware?
 
+	CommandHandler *CommandHandler
+
 	//
 	Session *discordgo.Session
 
@@ -35,8 +37,6 @@ type SuplexBot struct {
 
 func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *database.Database) *SuplexBot {
 	var bot = &SuplexBot{
-		//
-
 		Logger: nil,
 		Cfg:    nil,
 		DB:     nil,
@@ -44,6 +44,7 @@ func NewSuplexBot(logger *logging.Logger, cfg *config.Configuration, db *databas
 		interuptSignals: make(chan os.Signal, 1),
 		reloadSignals:   make(chan os.Signal, 1),
 	}
+	bot.CommandHandler = NewCommandHandler(bot)
 
 	return bot
 }
@@ -76,18 +77,50 @@ func (bot *SuplexBot) Launch() error {
 			return err
 		}
 
+		// Extended Logging
+		if bot.Logger.Level == logging.LogDebug {
+			session.Debug = true
+			session.LogLevel = discordgo.LogDebug
+		}
+
 		/*
-			//?? Intents
-			session.Identify.Intents |= discordgo.IntentAutoModerationExecution
-			session.Identify.Intents |= discordgo.IntentMessageContent
-			dg.Identify.Intents = discordgo.IntentsGuildMessages
-
-
-			// Intents setzen (sonst funktionieren Join-Events nicht)
-			dg.Identify.Intents = discordgo.IntentsGuilds |
-			discordgo.IntentsGuildMessages |
-			discordgo.IntentsGuildMembers
+			+ discord oauth2 user-agent
+			// The user agent used for REST APIs
+			UserAgent string
 		*/
+
+		// Should the session reconnect the websocket on errors.
+		session.ShouldReconnectOnError = true
+
+		// Whether or not to call event handlers synchronously.
+		session.SyncEvents = false
+
+		/*
+			QUIC client in future?
+			// The http client used for REST requests
+			Client *http.Client
+		*/
+
+		/*
+			type Session struct {
+			    // Should the session retry requests when rate limited.
+			    ShouldRetryOnRateLimit bool
+
+			    // Should state tracking be enabled.
+			    // State tracking is the best way for getting the users
+			    // active guilds and the members of the guilds.
+			    StateEnabled bool
+
+			    // Managed state object, updated internally with events when
+			    // StateEnabled is true.
+			    State *State
+
+			    // used to deal with rate limits
+			    Ratelimiter *RateLimiter
+			}
+		*/
+
+		session.Identify.Intents |= discordgo.IntentsAll
 
 		// Open Websocket
 		if err := session.Open(); err != nil {
