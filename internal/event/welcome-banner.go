@@ -93,7 +93,7 @@ func (bot *WelcomeUserBannerHandler) Exec(s *discordgo.Session, ev *discordgo.Gu
 
 	// Send Banner Embed
 	_, err = s.ChannelMessageSendComplex(
-		"WELCOME CHANNEL ID", //!
+		"934176121161920702", //! GUILD CONFIG
 		&discordgo.MessageSend{
 			Embeds: []*discordgo.MessageEmbed{{
 				Image: &discordgo.MessageEmbedImage{

@@ -24,5 +24,7 @@ func (bot *EventMessageCreate) Exec(s *discordgo.Session, ev *discordgo.MessageC
 		return
 	}
 
+	// store in DB für llm
+
 	// uwuify?
 }

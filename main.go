@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/Dr-Deep/Suplex.git/internal"
 	"github.com/Dr-Deep/Suplex.git/internal/command"
@@ -106,11 +108,25 @@ func setup() {
 func main() {
 	flag.Parse()
 	setup()
-	defer logger.Close()
 
 	// Suplex Bot
 	err := suplex.Launch()
 	if err != nil {
 		logger.Fatal("launch error", err.Error())
 	}
+
+	// Close resources we opened here
+	if db != nil {
+		if err := db.Close(); err != nil {
+			logger.Error("Database closed with error", err.Error())
+		}
+	}
+
+	if logger != nil {
+		if err := logger.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Logger closed with error: %s\n", err.Error())
+		}
+	}
+
+	os.Exit(0)
 }

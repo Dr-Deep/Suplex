@@ -74,6 +74,7 @@ func InitConfig(configFilePath string) (*config.Configuration, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer cfgFile.Close()
 
 	cfg, err = config.UnmarshalConfigFile(cfgFile)
 	if err != nil {

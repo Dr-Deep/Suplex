@@ -1,14 +1,14 @@
 package database
 
 import (
-	"database/sql"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 type Database struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
 func NewDatabase(filePath string) (*Database, error) {
@@ -22,15 +22,14 @@ func NewDatabase(filePath string) (*Database, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite3", filePath)
+	// Open DB
+	db, err := gorm.Open(
+		sqlite.Open(filePath),
+		&gorm.Config{},
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	// Pragma Settings
-	db.Exec(`PRAGMA foreign_keys = ON;`)
-	db.Exec(`PRAGMA journal_mode = WAL;`)
-	db.Exec(`PRAGMA synchronous = NORMAL;`)
 
 	database.db = db
 
@@ -38,5 +37,14 @@ func NewDatabase(filePath string) (*Database, error) {
 }
 
 func (d *Database) Close() error {
-	return d.db.Close()
+	if d.db == nil {
+		return nil
+	}
+
+	sqlDB, err := d.db.DB()
+	if err != nil {
+		return err
+	}
+
+	return sqlDB.Close()
 }
